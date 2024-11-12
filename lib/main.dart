@@ -1,7 +1,10 @@
 import 'package:chatapp_demo_ug/firebase_options.dart';
+import 'package:chatapp_demo_ug/message.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:generic_social_widgets/generic_social_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,7 +65,37 @@ class ChatView extends StatelessWidget {
         return Column(
           children: [
             Text('User id: ${authSnapshot.data?.uid}'),
-            // rest of app
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: messagesQuery.snapshots(),
+                builder: (context, messagesSnapshot) {
+                  if (messagesSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  }
+                  return ListView.builder(
+                      reverse: true,
+                      itemCount: messagesSnapshot.data!.size,
+                      itemBuilder: (BuildContext context, int idx) {
+                        final message = Message.fromFirestore(
+                            messagesSnapshot.data!.docs[idx]
+                                as DocumentSnapshot<Map<String, dynamic>>);
+
+                        return ChatBubble(text: message.message);
+                      });
+                },
+              ),
+            ),
+            ChatTextInput(
+              onSend: (message) {
+                FirebaseFirestore.instance.collection('messages').add(
+                      Message(
+                        uid: authSnapshot.data!.uid,
+                        message: message,
+                      ).toFirestore(),
+                    );
+              },
+            ),
           ],
         );
       },
