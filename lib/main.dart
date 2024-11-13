@@ -65,37 +65,39 @@ class ChatView extends StatelessWidget {
         return Column(
           children: [
             Text('User id: ${authSnapshot.data?.uid}'),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: messagesQuery.snapshots(),
-                builder: (context, messagesSnapshot) {
-                  if (messagesSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  }
-                  return ListView.builder(
-                      reverse: true,
-                      itemCount: messagesSnapshot.data!.size,
-                      itemBuilder: (BuildContext context, int idx) {
-                        final message = Message.fromFirestore(
-                            messagesSnapshot.data!.docs[idx]
-                                as DocumentSnapshot<Map<String, dynamic>>);
+            if (authSnapshot.hasData)
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: messagesQuery.snapshots(),
+                  builder: (context, messagesSnapshot) {
+                    if (messagesSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    }
+                    return ListView.builder(
+                        reverse: true,
+                        itemCount: messagesSnapshot.data!.size,
+                        itemBuilder: (BuildContext context, int idx) {
+                          final message = Message.fromFirestore(
+                              messagesSnapshot.data!.docs[idx]
+                                  as DocumentSnapshot<Map<String, dynamic>>);
 
-                        return ChatBubble(text: message.message);
-                      });
+                          return ChatBubble(text: message.message);
+                        });
+                  },
+                ),
+              ),
+            if (authSnapshot.hasData)
+              ChatTextInput(
+                onSend: (message) {
+                  FirebaseFirestore.instance.collection('messages').add(
+                        Message(
+                          uid: authSnapshot.data!.uid,
+                          message: message,
+                        ).toFirestore(),
+                      );
                 },
               ),
-            ),
-            ChatTextInput(
-              onSend: (message) {
-                FirebaseFirestore.instance.collection('messages').add(
-                      Message(
-                        uid: authSnapshot.data!.uid,
-                        message: message,
-                      ).toFirestore(),
-                    );
-              },
-            ),
           ],
         );
       },
